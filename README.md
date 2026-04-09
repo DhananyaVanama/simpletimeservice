@@ -314,7 +314,7 @@ No keys are stored on disk. The EC2 instance authenticates using an attached IAM
 
 1. In the AWS Console, go to **IAM → Roles → Create Role**.
 2. Select trusted entity type: **AWS Service → EC2**.
-3. Attach the `AdministratorAccess` policy (for testing; scope it down for production).
+3. Attach the `AmazonEC2FullAccess,AmazonECS_FullAccess,AutoScalingFullAccess.CloudWatchFullAccess,ElasticLoadBalancingFullAccess,IAMFullAccess` policy
 4. Name the role (e.g. `ec2-terraform-role`) and create it.
 5. Go to **EC2 → Instances**, select your server instance.
 6. Click **Actions → Security → Modify IAM Role**, select the role, and save.
