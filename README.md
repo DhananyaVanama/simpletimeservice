@@ -375,21 +375,34 @@ nano terraform.tfvars
 Edit the values to match your setup:
 
 ```hcl
-# AWS region to deploy into
 aws_region = "us-east-1"
 
-# Your DockerHub image — must be public
-# Format: "<dockerhub-username>/simpletimeservice:latest"
-container_image = "johndoe/simpletimeservice:latest"
+# Container
+container_image = "<dockerhub-username>/simpletimeservice:latest"
+container_port  = 8080
 
-# Name prefix applied to all AWS resources
-project_name = "simpletimeservice"
+# Task sizing
+task_cpu    = 256
+task_memory = 512
 
-# VPC CIDR block
-vpc_cidr = "10.0.0.0/16"
-
-# Number of ECS tasks to run (minimum 2 for high availability)
+# Service capacity
 desired_count = 2
+min_capacity  = 2
+max_capacity  = 10
+
+# Scale out when average CPU across the service exceeds 60%.
+scale_out_cpu_threshold = 60
+# Scale in when average CPU drops below 20% (saves cost).
+scale_in_cpu_threshold  = 20
+
+# Networking
+vpc_cidr             = "10.0.0.0/16"
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnet_cidrs = ["10.0.11.0/24", "10.0.12.0/24"]
+
+# Tags
+project_name = "SimpleTimeService"
+environment  = "dev"
 ```
 
 Save and exit: `Ctrl+X` → `Y` → `Enter`.
