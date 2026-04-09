@@ -68,10 +68,9 @@ using ECS Fargate behind an Application Load Balancer (ALB).
     ├── variables.tf        # Input variable declarations
     ├── outputs.tf          # Output values (e.g. load balancer URL)
     ├── terraform.tfvars    # Your variable values (edit this before deploying)
-    └── modules/
-        ├── vpc/            # VPC, subnets, IGW, NAT Gateway
-        ├── ecs/            # ECS cluster, task definition, service
-        └── alb/            # Application Load Balancer, target group
+    ├── vpc.tf              # VPC, subnets, IGW, NAT Gateway
+    ├── ecs.tf              # ECS cluster, task definition, service
+    └── alb.tf              # Application Load Balancer, target group
 ```
 
 ---
@@ -103,7 +102,7 @@ Internet
 Application Load Balancer   ← public subnets, port 80
    │
    ▼
-ECS Fargate Tasks           ← private subnets, port 5000
+ECS Fargate Tasks           ← private subnets, port 8080
    │
    ▼
 NAT Gateway                 ← outbound only (image pulls, AWS API calls)
@@ -237,10 +236,10 @@ pip3 install -r requirements.txt
 python3 app.py
 ```
 
-The server starts on port `5000`. Open a second terminal and test:
+The server starts on port `8080`. Open a second terminal and test:
 
 ```bash
-curl http://localhost:5000/
+curl http://localhost:8080/
 ```
 
 Expected response:
@@ -263,10 +262,10 @@ cd app
 docker build -t simpletimeservice:latest .
 
 # Run in the background
-docker run -d -p 5000:5000 --name simpletimeservice simpletimeservice:latest
+docker run -d -p 8080:8080 --name simpletimeservice simpletimeservice:latest
 
 # Test it
-curl http://localhost:5000/
+curl http://localhost:8080/
 
 # Confirm it runs as a non-root user
 docker exec simpletimeservice whoami
@@ -439,7 +438,7 @@ Apply complete! Resources: 28 added, 0 changed, 0 destroyed.
 
 Outputs:
 
-load_balancer_url = "http://simpletimeservice-alb-1234567890.us-east-1.elb.amazonaws.com"
+alb_dns_name = "http://simpletimeservice-alb-1234567890.us-east-1.elb.amazonaws.com"
 ```
 
 ---
@@ -460,6 +459,16 @@ Use the exact URL printed in your Terraform output. Expected response:
   "timestamp": "2024-11-15T10:30:00.123456",
   "ip": "203.0.113.42"
 }
+```
+
+To check the Health checks:
+
+```bash
+curl http://simpletimeservice-dev-alb-1234567890.us-east-1.elb.amazonaws.com 
+```
+
+```json
+{"status":"ok"}
 ```
 
 You can also paste the URL into a browser from any machine.
@@ -493,7 +502,7 @@ Type `yes` when prompted. After it completes, verify in the AWS Console
 | ECS Task | 256 CPU units, 512 MB memory; runs as non-root user `appuser` |
 | ECS Service | Configured desired count; automatically replaces failed tasks |
 | Security Group — ALB | Inbound: port 80 from `0.0.0.0/0` |
-| Security Group — ECS | Inbound: port 5000 from ALB security group only |
+| Security Group — ECS | Inbound: port 8080 from ALB security group only |
 | IAM Task Execution Role | Allows ECS to pull images and write to CloudWatch Logs |
 | CloudWatch Logs | Log group `/ecs/simpletimeservice`, retained for 7 days |
 
@@ -513,37 +522,3 @@ Type `yes` when prompted. After it completes, verify in the AWS Console
   attack surface.
 
 ---
-
-## Troubleshooting
-
-**`docker: permission denied`**
-→ Your user is not in the `docker` group yet. Run `newgrp docker` or log out and back in.
-
-**`terraform: command not found`**
-→ Terraform is not on `$PATH`. Re-run the install steps and confirm with `which terraform`.
-
-**`terraform init` fails — cannot reach registry.terraform.io**
-→ The server has no outbound internet access. Check firewall/proxy settings.
-
-**`aws sts get-caller-identity` returns "Unable to locate credentials"**
-→ Either run `aws configure` (Method B) or attach an IAM role to the EC2 instance (Method A).
-
-**`terraform apply` fails with "UnauthorizedOperation"**
-→ Your IAM user or role lacks permissions. Attach `AdministratorAccess` for testing.
-
-**ECS tasks are in `STOPPED` state right after deploy**
-→ Check CloudWatch Logs: AWS Console → CloudWatch → Log groups → `/ecs/simpletimeservice`.
-  Most common causes: wrong image name in `terraform.tfvars`, or the DockerHub
-  repository is set to Private.
-
-**`curl` to the load balancer times out**
-→ Wait 90 seconds after apply for health checks to pass. If still failing, check the
-  ECS service events: AWS Console → ECS → Clusters → your cluster → Services → Events tab.
-
-**ALB returns `502 Bad Gateway`**
-→ Flask is not listening on port 5000, or the container crashed on startup.
-  Check CloudWatch Logs for the error message.
-
-**`docker push` returns "denied: requested access to the resource is denied"**
-→ Run `docker login` first. If still failing, use a DockerHub Access Token instead of
-  your password: DockerHub → Account Settings → Security → New Access Token.
