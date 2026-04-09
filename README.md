@@ -1,7 +1,5 @@
 # simpletimeservice
 
-# SimpleTimeService — Particle41 DevOps Challenge
-
 A minimal Python microservice that returns the current timestamp and visitor IP address,
 containerised with Docker, and deployed to AWS ECS Fargate via Terraform — all driven
 from a Linux server.
