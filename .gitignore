@@ -1,7 +1,6 @@
 .terraform/
 *.tfstate
 *.tfstate.backup
-*.zip
-*.exe
 .env
 .aws/
+terraform.tfvars
