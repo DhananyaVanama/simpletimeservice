@@ -11,6 +11,11 @@ from a Linux server.
 - [Project Overview](#project-overview)
 - [Repository Structure](#repository-structure)
 - [Architecture & Why ECS Fargate](#architecture--why-ecs-fargate)
+- [Step 0 — Create Your AWS EC2 Server](#step-0--create-your-aws-ec2-server)
+  - [Prerequisites — AWS Account](#prerequisites--aws-account)
+  - [A. Create a Key Pair (for SSH access)](#a-create-a-key-pair-for-ssh-access)
+  - [B. Launch the EC2 Instance](#b-launch-the-ec2-instance)
+  - [C. Connect to the Server via SSH](#c-connect-to-the-server-via-ssh)
 - [Server Setup — Install Required Tools](#server-setup--install-required-tools)
   - [1. Update the System](#1-update-the-system)
   - [2. Install Git](#2-install-git)
@@ -107,6 +112,127 @@ NAT Gateway                 ← outbound only (image pulls, AWS API calls)
 ```
 
 ---
+
+## Step 0 — Create Your AWS EC2 Server
+
+This section walks you through creating a fresh Ubuntu server on AWS EC2 from scratch —
+the machine from which you will build, push, and deploy everything.
+
+> If you already have a server, skip to [Server Setup — Install Required Tools](#server-setup--install-required-tools).
+
+### Prerequisites — AWS Account
+
+You need an AWS account. If you don't have one:
+
+1. Go to https://aws.amazon.com and click **Create an AWS Account**.
+2. Enter your email, set a root password, and provide billing information.
+3. Choose the **Free Tier** plan.
+4. Once logged in, go to the **AWS Console** at https://console.aws.amazon.com.
+
+> **Important:** Do not use your root account for day-to-day work. After signing in as
+> root, go to **IAM → Users → Create User**, give it `AdministratorAccess`, and use
+> that user for everything below.
+
+---
+
+### A. Create a Key Pair (for SSH access)
+
+A key pair lets you securely SSH into your EC2 instance. You create it once and reuse it.
+
+1. In the AWS Console, use the search bar at the top to search for **EC2** and open it.
+2. In the left sidebar, scroll down to **Network & Security → Key Pairs**.
+3. Click **Create key pair**.
+4. Fill in the form:
+   - **Name:** `simpletimeservice-key`
+   - **Key pair type:** RSA
+   - **Private key file format:**
+     - Choose `.pem` if you are on Linux/macOS
+     - Choose `.ppk` if you are on Windows and using PuTTY
+5. Click **Create key pair**.
+
+Your browser will automatically download the private key file (e.g. `simpletimeservice-key.pem`).
+
+**Move and protect the key file on your local machine:**
+
+```bash
+# Move it to your SSH directory
+mv ~/Downloads/simpletimeservice-key.pem ~/.ssh/
+
+# Set strict permissions — SSH will refuse to use the key without this
+chmod 400 ~/.ssh/simpletimeservice-key.pem
+```
+
+> Never share this file. Never commit it to Git.
+
+---
+
+### B. Launch the EC2 Instance
+
+1. In the EC2 Console, click **Instances** in the left sidebar, then **Launch instances**.
+
+2. **Name:** `simpletimeservice-server`
+
+3. **Application and OS Image (AMI):**
+   - Click **Browse more AMIs** if needed
+   - Search for `Ubuntu Server 22.04 LTS`
+   - Select the one labelled **Free tier eligible**
+   - Architecture: `64-bit (x86)`
+
+4. **Instance type:**
+   - For development/testing: `t2.micro` (Free Tier eligible)
+   - For heavier workloads (building large images): `t3.small` or `t3.medium`
+
+5. **Key pair:** Select `simpletimeservice-key` from the dropdown.
+
+6. **Network settings** — click **Edit**:
+   - **VPC:** Leave as default (we are only creating the *deployment server* here; the
+     app's VPC is created by Terraform later)
+   - **Subnet:** Choose any public subnet (or leave as default)
+   - **Auto-assign public IP:** Enable
+   - **Firewall (security groups):** Select **Create security group**
+     - Security group name: `simpletimeservice-server-sg`
+     - Add the following inbound rules:
+
+     | Type | Protocol | Port | Source | Why |
+     |---|---|---|---|---|
+     | SSH | TCP | 22 | My IP | Lets you SSH in from your machine only |
+
+     > Using "My IP" is more secure than `0.0.0.0/0`. If your IP changes later,
+     > update this rule: EC2 → Security Groups → Edit inbound rules.
+
+7. **Configure storage:**
+   - Size: `20 GiB` (default 8 GiB is too small for Docker images)
+   - Volume type: `gp3`
+
+8. Click **Launch instance**.
+
+9. Click **View all instances**. Wait until the **Instance state** column shows
+   `Running` and the **Status check** column shows `2/2 checks passed`
+   (usually takes 1–2 minutes).
+
+10. Click on your instance and copy the **Public IPv4 address** — you will need it to SSH in.
+
+---
+
+### C. Connect to the Server via SSH
+
+**From Linux or macOS (Terminal):**
+
+```bash
+ssh -i ~/.ssh/simpletimeservice-key.pem ubuntu@<your-ec2-public-ip>
+```
+
+Replace `<your-ec2-public-ip>` with the IP address you copied (e.g. `54.172.45.130`).
+
+When prompted `Are you sure you want to continue connecting?` — type `yes` and press Enter.
+
+You should see a welcome banner and a prompt like:
+
+```
+ubuntu@ip-172-31-45-23:~$
+```
+
+You are now inside the server. Continue to the next section.
 
 ## Server Setup — Install Required Tools
 
