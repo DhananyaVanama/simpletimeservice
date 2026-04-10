@@ -356,7 +356,7 @@ Replace `<your-username>` with your actual GitHub username.
 
 ```bash
 cd app
-pip3 install -r requirements.txt
+pip install -r requirements.txt
 python3 -m uvicorn main:app --reload
 ```
 
