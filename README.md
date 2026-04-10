@@ -357,7 +357,7 @@ Replace `<your-username>` with your actual GitHub username.
 ```bash
 cd app
 pip3 install -r requirements.txt
-python3 app.py
+python3 -m uvicorn main:app --reload
 ```
 
 The server starts on port `8080`. Open a second terminal and test:
@@ -406,7 +406,7 @@ https://hub.docker.com/signup
 
 ```bash
 # Log in — enter your DockerHub username and password when prompted
-docker login
+docker login 
 
 # Tag the image with your DockerHub username
 docker tag simpletimeservice:latest <your-dockerhub-username>/simpletimeservice:latest
@@ -440,7 +440,7 @@ No keys are stored on disk. The EC2 instance authenticates using an attached IAM
 
 1. In the AWS Console, go to **IAM → Roles → Create Role**.
 2. Select trusted entity type: **AWS Service → EC2**.
-3. Attach the `AmazonEC2FullAccess,AmazonECS_FullAccess,AutoScalingFullAccess.CloudWatchFullAccess,ElasticLoadBalancingFullAccess,IAMFullAccess` policy
+3. Attach the `AmazonEC2FullAccess,AmazonECS_FullAccess,AutoScalingFullAccess,CloudWatchFullAccess,ElasticLoadBalancingFullAccess,IAMFullAccess` policy
 4. Name the role (e.g. `ec2-terraform-role`) and create it.
 5. Go to **EC2 → Instances**, select your server instance.
 6. Click **Actions → Security → Modify IAM Role**, select the role, and save.
@@ -464,6 +464,7 @@ You should see your AWS account ID and the attached role name. No further setup 
 Configure the AWS CLI on your server:
 
 ```bash
+cd
 aws configure
 ```
 
@@ -494,7 +495,7 @@ aws sts get-caller-identity
 Open the variables file:
 
 ```bash
-cd terraform
+cd simpletimeservice/terraform
 nano terraform.tfvars
 ```
 
@@ -538,10 +539,6 @@ Save and exit: `Ctrl+X` → `Y` → `Enter`.
 ### Deploy
 
 All Terraform commands run from the `terraform/` directory.
-
-```bash
-cd terraform
-```
 
 **Step 1 — Initialise** (downloads providers and modules; run once):
 
